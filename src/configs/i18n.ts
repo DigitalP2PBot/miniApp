@@ -11,14 +11,14 @@ const resources: TranslationResources = {
   en: {
     translation: {
       processing: "Starting order...",
-      processOrderButtonTitle: "Waiting to move founds...",
+      processOrderButtonTitle: "Waiting to move funds...",
       summaryOrder: "Order Summary",
       buttonConnectWalleTitle: "Connect Wallet",
       orderId: "Order ID",
       cryptoAmount: "Crypto Amount",
       depositFund: "Deposit Fund",
-      walletAddress: "Wallet Address",
-      networkId: "Network ID",
+      walletAddress: "Connected wallet Address",
+      networkId: "Network name",
       errorApprovingTransaction:
         "You should approve the transaction to continue the trade",
       errorTransactionNotApproved: "Transaction not approved",
@@ -35,19 +35,22 @@ const resources: TranslationResources = {
       transactionTitle: "We require two transactions to move the funds",
       transactionToApprove: "Approval transaction to move funds.",
       transactionToMove: "Transaction to move funds.",
+      reconnect: "Reconnect",
+      sendFunds: "Send funds",
+      goToWallet: "Go to wallet",
     },
   },
   es: {
     translation: {
-      depositFund: "Mover fondos",
+      depositFund: "Depositar fondos",
       processing: "Iniciando orden...",
       processOrderButtonTitle: "Esperando para mover fondos...",
       summaryOrder: "Resumen de la orden",
       buttonConnectWalleTitle: "Conectar Wallet",
       orderId: "ID de la orden",
       cryptoAmount: "USDT a transferir",
-      walletAddress: "Dirección de la billetera",
-      networkId: "ID de la red",
+      walletAddress: "Dirección de la billetera conectada",
+      networkId: "Nombre de la red",
       errorApprovingTransaction:
         "Debes aprobar la transacción para continuar con el intercambio",
       errorTransactionNotApproved: "Transacción no aprobada",
@@ -63,6 +66,9 @@ const resources: TranslationResources = {
       transactionTitle: "Completa las siguientes acciones para mover los fondos",
       transactionToApprove: "Aprueba la transacción",
       transactionToMove: "Confirma el movimiento",
+      reconnect: "Reconectar",
+      sendFunds: "Enviar fondos",
+      goToWallet: "Ir a la wallet",
     },
   },
 };

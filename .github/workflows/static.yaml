@@ -43,6 +43,7 @@ jobs:
           touch .env
           echo VITE_WALLET_CONNECT_PROJECT_ID=${{ secrets.WALLET_CONNECT_PROJECT_ID }} >> .env
           echo VITE_BRIDGE_URL=${{ secrets.BRIDGE_URL }} >> .env
+          echo VITE_APP_DOMAIN=${{ secrets.APP_DOMAIN }} >> .env
           echo VITE_DIGITALP2P_POLYGON_SM_ADDRESS=${{ secrets.DIGITALP2P_POLYGON_SM_ADDRESS }} >> .env
           echo VITE_POLYGON_USDT_ADDRESS=${{ secrets.POLYGON_USDT_ADDRESS }} >> .env
           echo BRIDGE_URL=${{ secrets.BRIDGE_URL }} >> .env

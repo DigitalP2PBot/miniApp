@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import {
-  useAppKitState,
   useAppKit,
   useAppKitAccount,
+  useAppKitNetwork,
 } from "@reown/appkit/react";
 import { AccountControllerState } from "@reown/appkit-core";
 
@@ -19,20 +19,20 @@ type Props = {
 
 const WalletConnectModal: React.FC<Props> = ({ title, onCallback }) => {
   const { open } = useAppKit();
-  const { selectedNetworkId } = useAppKitState();
   const { address, isConnected, status } = useAppKitAccount();
   //const { address, isConnected, caipAddress, status } = useAppKitAccount();
-  //const { switchNetwork } = useAppKitNetwork();
-
+  const { caipNetwork } = useAppKitNetwork();
+  const { name: selectedNetworkName } = caipNetwork || {}; 
+  console.log("caipNetwork", selectedNetworkName);
   const connect = async () => {
     await open({ view: "Connect" });
   };
   useEffect(() => {
     const setupProvider = () => {
-      onCallback(isConnected, status, address, selectedNetworkId);
+      onCallback(isConnected, status, address, selectedNetworkName);
     };
     setupProvider();
-  }, [selectedNetworkId, onCallback, address, isConnected, status]);
+  }, [selectedNetworkName, onCallback, address, isConnected, status]);
   return (
     <>
       <ConnectButton title={title} callback={connect} />

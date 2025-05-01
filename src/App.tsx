@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
-import WebApp from "@twa-dev/sdk";
+
 import { AppDispatch, RootState } from "./redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { setConnectionState } from "./redux/connectionSlice";
+
+import WebApp from "@twa-dev/sdk";
 import { AccountControllerState } from "@reown/appkit-core";
 
-import { BrowserProvider, Contract, Eip1193Provider, ethers } from "ethers";
+import { Transaction } from './workers/transactionWorker';
 import {
   useDisconnect,
   useAppKitProvider,
@@ -13,16 +17,13 @@ import {
 import PrimaryButton from "./components/buttons/PrimaryButton";
 import LoadingButton from "./components/buttons/LoadingButton";
 import GhostButton from "./components/buttons/GhostButton";
-
 import WalletConnectModal from "./components/connectors/WalletConnectModal";
-
 import LayoutHeader from "./components/organism/LayuotHeader";
 import InfoLabel from "./components/organism/InfoLabel";
 import InfoCard from "./components/organism/InfoCard";
 import StatusLabel from "./components/organism/StatusLabel";
+import StatusOverlay from "./components/statusOverlay/StatusOverlay";
 
-import { useDispatch, useSelector } from "react-redux";
-import { setConnectionState } from "./redux/connectionSlice";
 import i18n from "./configs/i18n";
 import i18next from "i18next";
 
@@ -49,14 +50,8 @@ enum TransactionState {
 
 const env = import.meta.env.VITE_ENVIRONMENT;
 const telegramCloseAppTimeOut = 2000;
+const DEBUG_LEVEL = import.meta.env.VITE_DEBUG_LEVEL || "error";
 
-const USDTAbi = [
-  "function approve(address spender, uint256 value) returns (bool)",
-];
-
-const digitalP2PExchangeAbi = [
-  "function processOrder(string _orderId, uint256 cryptoAmount, address tokenAddress)",
-];
 WebApp.setHeaderColor("#1a1a1a");
 function App() {
   const { close } = useAppKit();
@@ -74,7 +69,7 @@ function App() {
   const [transactionState, setTransactionState] = useState<TransactionState>(
     TransactionState.PENDING
   );
-  const [networkId, setNetwotkId] = useState<string | undefined>("");
+  const [networkName, setNetwotkName] = useState<string | undefined>("");
 
   const telegramWebApp = window.Telegram.WebApp;
 
@@ -84,14 +79,9 @@ function App() {
     urlParams.get("cryptoAmount") as string
   );
   const lang = urlParams.get("lang") as string;
-  const digitalP2PExchangeAddress = urlParams.get(
-    "networkP2pContractAddress"
-  ) as string;
-  const networkTokenAddress = urlParams.get("networkTokenAddress") as string;
-  //const networkSymbol = urlParams.get("networkSymbol") as string;
-  const networkDecimals = parseInt(urlParams.get("networkDecimals") as string);
-  //const networkChainId = urlParams.get("networkChainId") as string;
-  //const networkName = urlParams.get("networkName") as string;
+
+  const transaction = new Transaction();
+  let checkInterval: any | null = null;
 
   i18n.changeLanguage(lang ?? "es");
   const connectionState = useSelector(
@@ -99,82 +89,32 @@ function App() {
   );
 
   const dispatch = useDispatch<AppDispatch>();
+
+  const finishTransaction = (message:string, state: TransactionState) => {
+    clearInterval(checkInterval);
+    checkInterval = null;
+    setTimeout(() => {
+      telegramWebApp.close();
+    }, telegramCloseAppTimeOut);
+    if(state === TransactionState.PROCCESED){
+      setLogMessageSuccess(i18n.t(message));
+      return;
+    }
+    setLogMessageError(i18n.t(message));
+  }
+
   const approveTransaction = async () => {
     setTransactionState(TransactionState.PROCESSING);
-    const ethersProvider = new BrowserProvider(
-      walletProvider as Eip1193Provider
-    );
 
-    let signer = null;
-    try {
-      signer = await ethersProvider.getSigner();
-    } catch (e) {
-      console.log("error get signer", e);
-      setLogMessageError(i18n.t("walletNotConnected"));
-      setTransactionState(TransactionState.PENDING);
-      await handleDisconnect();
-      return;
-    }
-    console.log("Network token address", networkTokenAddress);
-
-    const usdtContract = new Contract(networkTokenAddress, USDTAbi, signer);
-
-    const digitalP2PExchangeContract = new Contract(
-      digitalP2PExchangeAddress,
-      digitalP2PExchangeAbi,
-      signer
-    );
-
-    let digitalP2PCanMoveFunds = false;
-    try {
-      digitalP2PCanMoveFunds = await usdtContract
-        .approve(
-          digitalP2PExchangeAddress,
-          ethers.parseUnits(cryptoAmount.toString(), networkDecimals)
-        )
-        .then((res) => {
-          console.log("transaction approved", res);
-          return res;
-        });
-      setTransactionState(TransactionState.APPROVED);
-    } catch (e: any) {
-      let errorMessage = "errorApprovingTransaction";
-      if (e.reason === "rejected") errorMessage = "errorTransactionNotApproved";
-      console.log("error approving transaction", e);
-      setTransactionState(TransactionState.NOT_APPROVED);
-      setLogMessageError(i18n.t(errorMessage));
-      return;
-    }
-    if (digitalP2PCanMoveFunds) {
-      try {
-        await digitalP2PExchangeContract
-          .processOrder(
-            orderId,
-            ethers.parseUnits(cryptoAmount.toString(), networkDecimals),
-            networkTokenAddress,
-            {
-              gasLimit: 200000,
-            }
-          )
-          .then((res) => {
-            console.log("transaction processed", res);
-          });
-        setLogMessageSuccess(i18n.t("transactionApproved"));
-        setTransactionState(TransactionState.PROCCESED);
-        setTimeout(() => {
-          telegramWebApp.close();
-        }, telegramCloseAppTimeOut);
-      } catch (e: any) {
-        console.log("error", e);
-        let errorMessage = "errorTransactionProcessOrder";
-        if (e.reason === "rejected") errorMessage = "errorTransactionRejected";
-        setTransactionState(TransactionState.REJECTED);
-        setLogMessageError(i18n.t(errorMessage));
+    transaction.createTransaction({search: window.location.search, walletProvider});
+    checkInterval = setInterval(() => {
+      const {isFinished, status, message} = transaction.checkStatus();
+      if (isFinished) {
+        finishTransaction(message, status);
       }
-    } else {
-      setTransactionState(TransactionState.PENDING);
-      setLogMessageError(i18n.t("errorApprovingTransaction"));
-    }
+      setTransactionState(status);
+    }, 500);
+
   };
   const disconnectUser = async () => {
     await disconnect();
@@ -189,7 +129,7 @@ function App() {
     isConnected: boolean,
     status: AccountControllerState["status"],
     address?: string,
-    selectedNetworkId?: string
+    selectedNetworkName?: string
   ) => {
     if (isConnected) {
       dispatch(setConnectionState(walletConnectionState.CONNECTED));
@@ -200,7 +140,7 @@ function App() {
     }
     setWalletAddress(address);
     setConnectionStatus(status);
-    setNetwotkId(selectedNetworkId);
+    setNetwotkName(selectedNetworkName);
   };
 
   // Handle MainButton changes on view change
@@ -236,6 +176,14 @@ function App() {
     dispatch(setConnectionState(walletConnectionState.DISCONNECTED));
   };
 
+ const { open } = useAppKit();
+
+  const handleReconnect = async () => {
+    await handleDisconnect();
+    handleConnect(false, "disconnected");
+    open({ view: "Connect" });
+  };
+
   useEffect(() => {
     // Access the WebApp object
 
@@ -249,8 +197,8 @@ function App() {
       <main className="flex flex-col h-80v w-screen rounded-xl">
         <div className="flex flex-col flex-grow min-h-full justify-end">
           <div className="components-container">
-            <div className="flex flex-col bg-white pt-4 pr-8 pb-8 pl-8 gap-4 rounded-t-3xl rounded-b-xl shadow-custom-white">
-              {env === "dev" && (
+            <div className="flex flex-col bg-white pt-4 pr-8 pb-8 pl-8 gap-4 rounded-t-3xl shadow-custom-white">
+              {env === "dev" && DEBUG_LEVEL === "debug" && (
                 <p className="text-customGrayText mt-0 mr-0 mb-4 ml-0 text-left">
                   Message log {messageLog}
                 </p>
@@ -295,7 +243,7 @@ function App() {
                   <>
                     <InfoLabel
                       label={i18n.t("networkId")}
-                      content={networkId}
+                      content={networkName}
                     />
 
                     <InfoLabel
@@ -355,41 +303,45 @@ function App() {
                   />
                 )}
               </div>
-            </div>
-            <footer className="flex flex-col gap-4 p-8 pt-0 bg-white rounded-xl shadow-custom-white">
-              {view === View.CONNECTED && (
-                <>
-                  {transactionState === TransactionState.PENDING && (
-                    <PrimaryButton
-                      title={i18n.t("depositFund")}
-                      callback={approveTransaction}
+              <footer className="flex flex-col gap-4 p-8 pt-0">
+                {view === View.CONNECTED && (
+                  <>
+                    {transactionState === TransactionState.PENDING && (
+                      <PrimaryButton
+                        title={i18n.t("depositFund")}
+                        callback={approveTransaction}
+                      />
+                    )}
+                    {transactionState === TransactionState.PROCESSING && (
+                      <LoadingButton
+                        title={i18next.t("processing")}
+                        isLoading={true}
+                      />
+                    )}
+                    {transactionState === TransactionState.APPROVED && (
+                      <LoadingButton
+                        title={i18next.t("processOrderButtonTitle")}
+                        isLoading={true}
+                      />
+                    )}
+                    <GhostButton
+                      title={i18next.t("reconnect")}
+                      callback={handleReconnect}
                     />
-                  )}
-                  {transactionState === TransactionState.PROCESSING && (
-                    <LoadingButton
-                      title={i18next.t("processing")}
-                      isLoading={true}
-                    />
-                  )}
-                  {transactionState === TransactionState.APPROVED && (
-                    <LoadingButton
-                      title={i18next.t("processOrderButtonTitle")}
-                      isLoading={true}
-                    />
-                  )}
-                  <GhostButton title="Disconnect" callback={handleDisconnect} />
-                </>
-              )}
+                  </>
+                )}
 
-              {view === View.CONNECT && (
-                <WalletConnectModal
-                  title={i18n.t("buttonConnectWalleTitle")}
-                  onCallback={handleConnect}
-                />
-              )}
-            </footer>
+                {view === View.CONNECT && (
+                  <WalletConnectModal
+                    title={i18n.t("buttonConnectWalleTitle")}
+                    onCallback={handleConnect}
+                  />
+                )}
+              </footer>
+            </div>
           </div>
         </div>
+        <StatusOverlay status={transactionState}/>
       </main>
     </div>
   );

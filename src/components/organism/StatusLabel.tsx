@@ -76,7 +76,6 @@ const getIconByType = (type: StatusType): ReactNode => {
             >
                 <g 
                     fill="none"
-                    fill-rule="evenodd"
                     stroke="currentColor"
                     strokeWidth="2"
                     transform="translate(2 2)"

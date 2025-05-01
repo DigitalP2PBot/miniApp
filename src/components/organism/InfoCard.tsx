@@ -5,7 +5,7 @@ type  Props = {
 }
 
 const InfoCard: React.FC<Props> = ({content}) => (
-    <section className="bg-customGrayWallet m-0 rounded-lg p-4 pb-4 text-left">
+    <section id="step-pending" className="bg-customGrayWallet m-0 rounded-lg p-4 pb-4 text-left">
         {content}
     </section>
 )
