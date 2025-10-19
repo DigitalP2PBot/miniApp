@@ -23,19 +23,20 @@ type NetworkKey = keyof typeof networks;
 const getDefaultNetwork = (): NetworkKey => {
   // If networkName is provided and valid for the environment, use it
   if (networkName && networks[networkName as NetworkKey]) {
-    const allowedNetworks = environmentNetworks[environment as keyof typeof environmentNetworks] || environmentNetworks.dev;
+    const allowedNetworks = environmentNetworks[environment as keyof typeof environmentNetworks] || environmentNetworks.prod;
     if (allowedNetworks.includes(networkName)) {
       return networkName as NetworkKey;
     }
   }
 
   // Otherwise use environment default
-  if (environment === "prod") {
-    return "polygon";
+  // Default to production (polygon) unless explicitly set to dev
+  if (environment === "dev") {
+    return (import.meta.env.VITE_DEFAULT_NETWORK as NetworkKey) || "sepolia";
   }
 
-  // Dev environment default
-  return (import.meta.env.VITE_DEFAULT_NETWORK as NetworkKey) || "sepolia";
+  // Production default (also fallback if environment not set)
+  return "polygon";
 };
 
 const DEFAULT_NETWORK = getDefaultNetwork();
@@ -43,7 +44,8 @@ const defaultNetwork = networks[DEFAULT_NETWORK];
 
 // Get all allowed networks for the environment
 const getAllowedNetworks = () => {
-  const allowedNetworkNames = environmentNetworks[environment as keyof typeof environmentNetworks] || environmentNetworks.dev;
+  // Default to production networks if environment not recognized
+  const allowedNetworkNames = environmentNetworks[environment as keyof typeof environmentNetworks] || environmentNetworks.prod;
   const networkList = allowedNetworkNames.map(name => networks[name as NetworkKey]);
   // Ensure we have at least one network
   return networkList.length > 0 ? networkList : [defaultNetwork];
