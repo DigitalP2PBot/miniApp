@@ -4,7 +4,12 @@ import { EthersAdapter } from "@reown/appkit-adapter-ethers";
 
 const urlParams = new URLSearchParams(window.location.search);
 const networkName = urlParams.get("networkName") as string;
-const environment = import.meta.env.VITE_ENVIRONMENT || "dev";
+
+// Determine environment: if on GitHub Pages (production URL), use prod
+const isProduction = window.location.hostname === 'digitalp2pbot.github.io';
+const environment = isProduction ? "prod" : (import.meta.env.VITE_ENVIRONMENT || "dev");
+
+console.log("Environment detected:", environment, "URL:", window.location.hostname);
 
 // Configure networks with proper RPC URLs if needed
 const networks = {
@@ -55,7 +60,12 @@ const defaultNetwork = networks[DEFAULT_NETWORK];
 
 // Get all allowed networks for the environment
 const getAllowedNetworks = () => {
-  // Default to production networks if environment not recognized
+  // For production, ONLY allow Polygon mainnet
+  if (environment === "prod") {
+    return [networks.polygon];
+  }
+
+  // For dev, allow testnets
   const allowedNetworkNames = environmentNetworks[environment as keyof typeof environmentNetworks] || environmentNetworks.prod;
   const networkList = allowedNetworkNames.map(name => networks[name as NetworkKey]);
   // Ensure we have at least one network
