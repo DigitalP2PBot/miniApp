@@ -13,8 +13,8 @@
     },
     "dependencies": {
         "@reduxjs/toolkit": "^2.2.4",
-        "@reown/appkit": "^1.5.2",
-        "@reown/appkit-adapter-ethers": "^1.5.2",
+        "@reown/appkit": "^1.8.10",
+        "@reown/appkit-adapter-ethers": "^1.8.10",
         "@reown/appkit-adapter-wagmi": "^1.5.3",
         "@tanstack/react-query": "^5.29.0",
         "@tonconnect/ui-react": "^2.0.0",

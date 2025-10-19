@@ -1,12 +1,23 @@
 import { createAppKit } from "@reown/appkit/react";
 import { polygon, polygonAmoy, sepolia } from "@reown/appkit/networks";
+import { EthersAdapter } from "@reown/appkit-adapter-ethers";
 
 const urlParams = new URLSearchParams(window.location.search);
 const networkName = urlParams.get("networkName") as string;
 const environment = import.meta.env.VITE_ENVIRONMENT || "dev";
 
+// Configure networks with proper RPC URLs if needed
 const networks = {
-  polygon: polygon,
+  polygon: {
+    ...polygon,
+    rpcUrls: {
+      ...polygon.rpcUrls,
+      default: {
+        http: ['https://polygon-rpc.com'],
+        webSocket: undefined
+      }
+    }
+  },
   polygonAmoy: polygonAmoy,
   sepolia: sepolia,
 };
@@ -66,7 +77,11 @@ export const createWalletConnectModal = () => {
 
   const allowedNetworks = getAllowedNetworks();
 
+  // Create the ethers adapter
+  const ethersAdapter = new EthersAdapter();
+
   createAppKit({
+    adapters: [ethersAdapter],
     networks: allowedNetworks as [typeof defaultNetwork, ...typeof allowedNetworks],
     defaultNetwork: defaultNetwork,
     metadata,
@@ -76,7 +91,14 @@ export const createWalletConnectModal = () => {
       socials: false, // Optional - defaults to your Cloud configuration
       emailShowWallets: false,
       email: false,
+      swaps: false, // Disable swaps feature
+      onramp: false, // Disable onramp feature
     },
+    themeMode: 'light', // Set theme mode
+    themeVariables: {
+      '--w3m-accent': '#5DB075', // DigitalP2P green color
+      '--w3m-border-radius-master': '8px',
+    }
   });
 };
 

@@ -4,7 +4,6 @@ import {
   useAppKitAccount,
   useAppKitNetwork,
 } from "@reown/appkit/react";
-import { AccountControllerState } from "@reown/appkit-core";
 import {
   getExpectedNetworkId,
   getExpectedNetworkObject,
@@ -17,7 +16,7 @@ type Props = {
   title: string;
   onCallback: (
     isConnected: boolean,
-    status: AccountControllerState["status"],
+    status: string | undefined,
     address?: string,
     selectidNetworkId?: string
   ) => void;

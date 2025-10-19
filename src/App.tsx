@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { setConnectionState } from "./redux/connectionSlice";
 
 import WebApp from "@twa-dev/sdk";
-import { AccountControllerState } from "@reown/appkit-core";
 
 import { Transaction } from './workers/transactionWorker';
 import {
@@ -64,7 +63,7 @@ function App() {
   const [logMesasgeError, setLogMessageError] = useState<string>("");
   const [logMesasgeSuccess, setLogMessageSuccess] = useState<string>("");
   const [connectionStatus, setConnectionStatus] =
-    useState<AccountControllerState["status"]>();
+    useState<string | undefined>();
   const [messageLog, setMessageLog] = useState<string>("");
   const [transactionState, setTransactionState] = useState<TransactionState>(
     TransactionState.PENDING
@@ -127,7 +126,7 @@ function App() {
 
   const handleConnect = (
     isConnected: boolean,
-    status: AccountControllerState["status"],
+    status: string | undefined,
     address?: string,
     selectedNetworkName?: string
   ) => {
