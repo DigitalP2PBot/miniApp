@@ -61,13 +61,17 @@ const defaultNetwork = networks[DEFAULT_NETWORK];
 // Get all allowed networks for the environment
 const getAllowedNetworks = () => {
   // For production, ONLY allow Polygon mainnet
-  if (environment === "prod") {
+  if (environment === "prod" || isProduction) {
+    console.log("Production environment - only Polygon network allowed");
     return [networks.polygon];
   }
 
   // For dev, allow testnets
   const allowedNetworkNames = environmentNetworks[environment as keyof typeof environmentNetworks] || environmentNetworks.prod;
   const networkList = allowedNetworkNames.map(name => networks[name as NetworkKey]);
+
+  console.log("Development environment - networks allowed:", allowedNetworkNames);
+
   // Ensure we have at least one network
   return networkList.length > 0 ? networkList : [defaultNetwork];
 };
@@ -87,13 +91,21 @@ export const createWalletConnectModal = () => {
 
   const allowedNetworks = getAllowedNetworks();
 
+  console.log("Creating WalletConnect modal with networks:", allowedNetworks.map(n => n.name));
+  console.log("Default network:", defaultNetwork.name);
+
   // Create the ethers adapter
   const ethersAdapter = new EthersAdapter();
 
+  // Ensure only Polygon in production by double-checking
+  const finalNetworks = (environment === "prod" || isProduction)
+    ? [networks.polygon]
+    : allowedNetworks;
+
   createAppKit({
     adapters: [ethersAdapter],
-    networks: allowedNetworks as [typeof defaultNetwork, ...typeof allowedNetworks],
-    defaultNetwork: defaultNetwork,
+    networks: finalNetworks as [typeof defaultNetwork, ...typeof finalNetworks],
+    defaultNetwork: (environment === "prod" || isProduction) ? networks.polygon : defaultNetwork,
     metadata,
     projectId,
     features: {
