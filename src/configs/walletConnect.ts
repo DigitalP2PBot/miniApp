@@ -89,39 +89,74 @@ export const createWalletConnectModal = () => {
     icons: ["https://bot.digitalp2p.co/digitalP2P.svg"],
   };
 
-  const allowedNetworks = getAllowedNetworks();
+  // CRITICAL: Only use Polygon in production
+  // Check multiple conditions to ensure we're in production
+  const isProductionEnvironment =
+    environment === "prod" ||
+    isProduction ||
+    window.location.hostname === 'digitalp2pbot.github.io' ||
+    window.location.href.includes('digitalp2pbot.github.io');
 
-  console.log("Creating WalletConnect modal with networks:", allowedNetworks.map(n => n.name));
-  console.log("Default network:", defaultNetwork.name);
+  console.log("Production check:", {
+    environment,
+    isProduction,
+    hostname: window.location.hostname,
+    isProductionEnvironment
+  });
 
   // Create the ethers adapter
   const ethersAdapter = new EthersAdapter();
 
-  // Ensure only Polygon in production by double-checking
-  const finalNetworks = (environment === "prod" || isProduction)
-    ? [networks.polygon]
-    : allowedNetworks;
+  if (isProductionEnvironment) {
+    // Production: ONLY Polygon
+    console.log("PRODUCTION MODE: Only Polygon network will be available");
 
-  createAppKit({
-    adapters: [ethersAdapter],
-    networks: finalNetworks as [typeof defaultNetwork, ...typeof finalNetworks],
-    defaultNetwork: (environment === "prod" || isProduction) ? networks.polygon : defaultNetwork,
-    metadata,
-    projectId,
-    features: {
-      analytics: true, // Optional - defaults to your Cloud configuration
-      socials: false, // Optional - defaults to your Cloud configuration
-      emailShowWallets: false,
-      email: false,
-      swaps: false, // Disable swaps feature
-      onramp: false, // Disable onramp feature
-    },
-    themeMode: 'light', // Set theme mode
-    themeVariables: {
-      '--w3m-accent': '#5DB075', // DigitalP2P green color
-      '--w3m-border-radius-master': '8px',
-    }
-  });
+    createAppKit({
+      adapters: [ethersAdapter],
+      networks: [networks.polygon],
+      defaultNetwork: networks.polygon,
+      metadata,
+      projectId,
+      features: {
+        analytics: true,
+        socials: false,
+        emailShowWallets: false,
+        email: false,
+        swaps: false,
+        onramp: false,
+      },
+      themeMode: 'light',
+      themeVariables: {
+        '--w3m-accent': '#5DB075',
+        '--w3m-border-radius-master': '8px',
+      }
+    });
+  } else {
+    // Development: Allow test networks
+    console.log("DEVELOPMENT MODE: Test networks available");
+    const allowedNetworks = getAllowedNetworks();
+
+    createAppKit({
+      adapters: [ethersAdapter],
+      networks: allowedNetworks as [typeof defaultNetwork, ...typeof allowedNetworks],
+      defaultNetwork: defaultNetwork,
+      metadata,
+      projectId,
+      features: {
+        analytics: true,
+        socials: false,
+        emailShowWallets: false,
+        email: false,
+        swaps: false,
+        onramp: false,
+      },
+      themeMode: 'light',
+      themeVariables: {
+        '--w3m-accent': '#5DB075',
+        '--w3m-border-radius-master': '8px',
+      }
+    });
+  }
 };
 
 // Export helper to get the expected network for validation
