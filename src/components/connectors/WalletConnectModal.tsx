@@ -52,12 +52,40 @@ const WalletConnectModal: React.FC<Props> = ({ title, onCallback }) => {
     }
   };
 
+  // Add a more aggressive check for connection status
+  useEffect(() => {
+    let checkInterval: NodeJS.Timeout | null = null;
+
+    // If status is not disconnected, start checking for connection
+    if (status && status !== 'disconnected') {
+      checkInterval = setInterval(async () => {
+        console.log("Checking connection:", { isConnected, status, address });
+
+        // If we have an address, we're connected
+        if (address) {
+          console.log("Wallet connected with address:", address);
+          await close();
+          if (checkInterval) {
+            clearInterval(checkInterval);
+          }
+        }
+      }, 500); // Check every 500ms
+    }
+
+    return () => {
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+    };
+  }, [status, address, close]);
+
   useEffect(() => {
     const setupProvider = async () => {
       console.log("WalletConnect state:", { isConnected, status, address, selectedNetworkId });
 
       // Close modal if connected successfully
       if (isConnected && address) {
+        console.log("Closing modal - wallet connected");
         await close();
       }
 
