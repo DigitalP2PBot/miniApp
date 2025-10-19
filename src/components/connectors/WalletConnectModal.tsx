@@ -23,7 +23,7 @@ type Props = {
 };
 
 const WalletConnectModal: React.FC<Props> = ({ title, onCallback }) => {
-  const { open } = useAppKit();
+  const { open, close } = useAppKit();
   const { address, isConnected, status } = useAppKitAccount();
   const { caipNetwork, switchNetwork } = useAppKitNetwork();
   const { name: selectedNetworkName, id: selectedNetworkId } = caipNetwork || {};
@@ -54,6 +54,13 @@ const WalletConnectModal: React.FC<Props> = ({ title, onCallback }) => {
 
   useEffect(() => {
     const setupProvider = async () => {
+      console.log("WalletConnect state:", { isConnected, status, address, selectedNetworkId });
+
+      // Close modal if connected successfully
+      if (isConnected && address) {
+        await close();
+      }
+
       // If connected and network doesn't match expected, show custom warning
       if (isConnected && selectedNetworkId && !isSwitching) {
         const expectedNetworkId = getExpectedNetworkId();
@@ -70,6 +77,7 @@ const WalletConnectModal: React.FC<Props> = ({ title, onCallback }) => {
         }
       }
 
+      // Always callback with the current state, even if still connecting
       onCallback(isConnected, status, address, selectedNetworkName);
     };
     setupProvider();
@@ -81,6 +89,7 @@ const WalletConnectModal: React.FC<Props> = ({ title, onCallback }) => {
     isConnected,
     status,
     isSwitching,
+    close,
   ]);
 
   return (
