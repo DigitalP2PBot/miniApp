@@ -38,6 +38,12 @@ const resources: TranslationResources = {
       reconnect: "Reconnect",
       sendFunds: "Send funds",
       goToWallet: "Go to wallet",
+      networkMismatchTitle: "Wrong Network",
+      currentNetwork: "Current network",
+      requiredNetwork: "Required network",
+      networkMismatchDescription:
+        "Please switch your wallet to the required network to continue with this transaction.",
+      switchNetworkButton: "Switch Network",
     },
   },
   es: {
@@ -69,6 +75,12 @@ const resources: TranslationResources = {
       reconnect: "Reconectar",
       sendFunds: "Enviar fondos",
       goToWallet: "Ir a la wallet",
+      networkMismatchTitle: "Red Incorrecta",
+      currentNetwork: "Red actual",
+      requiredNetwork: "Red requerida",
+      networkMismatchDescription:
+        "Por favor cambia tu billetera a la red requerida para continuar con esta transacción.",
+      switchNetworkButton: "Cambiar Red",
     },
   },
 };

@@ -17,19 +17,6 @@ enum TransactionState {
   REJECTED = "rejected",
 }
 
-let hasFocus = false;
-let lastUrl = "";
-const originalOpen = window.open;
-window.open = function (
-  url: string | URL | undefined,
-  target: string | undefined,
-  features: string | undefined,
-) {
-  console.log("open", url, target, features);
-  lastUrl = url as string;
-  return originalOpen(url, target, features);
-};
-
 export class Transaction {
   private transactionStatus: TransactionState = TransactionState.PENDING;
   private usdtContract: Promise<boolean | undefined> | boolean | undefined =
@@ -40,17 +27,10 @@ export class Transaction {
   private walletProvider: any | null = null;
   private signer: any | null = null;
   private returnMessage: string = "";
-  private waitForContract: any | null = undefined;
 
   constructor() {
     this.transactionStatus = TransactionState.PENDING;
-    document.addEventListener("visibilitychange", this.handleVisibilityChange);
   }
-
-  handleVisibilityChange = () => {
-    console.log(document.hasFocus());
-    hasFocus = document.visibilityState === "visible";
-  };
 
   setTransactionState = (state: TransactionState) =>
     (this.transactionStatus = state);
@@ -77,7 +57,6 @@ export class Transaction {
   public createTransaction = async ({ search, walletProvider }: any) => {
     this.search = search;
     this.walletProvider = walletProvider;
-    const isFocused = hasFocus;
     const urlParams = new URLSearchParams(this.search);
     const signer = await this.#getSigner(this.walletProvider);
     const digitalP2PExchangeAddress = urlParams.get(
@@ -123,40 +102,15 @@ export class Transaction {
       })
         .then(() => {
           this.exchangeContract = true;
+          this.returnMessage = "transactionApproved";
         })
         .catch((e) => {
           console.error(`Exchange Contract Error ${e}`);
           this.transactionStatus = TransactionState.REJECTED;
         });
     }
-    if (
-      isFocused &&
-      this.exchangeContract === false &&
-      this.waitForContract === undefined
-    ) {
-      this.waitForContract = setInterval(() => {
-        if (!isFocused) {
-          clearInterval(this.waitForContract);
-          this.waitForContract = undefined;
-          return;
-        }
-        window.open(lastUrl, "_blank", "noopener noreferrer");
-      }, 5000);
-      this.setFocusProgrammatically();
-    }
-    if (this.exchangeContract === true)
-      this.returnMessage = "transactionApproved";
     return true;
   };
-
-  setFocusProgrammatically() {
-    window.focus();
-    window.Telegram?.WebApp?.expand();
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred("medium");
-    const focusTarget = document.getElementById("step-pending");
-    focusTarget?.click();
-    focusTarget?.focus();
-  }
 
   #getSigner = async (walletProvider: Eip1193Provider) => {
     if (this.signer) return this.signer;
@@ -187,16 +141,26 @@ export class Transaction {
     let digitalP2PCanMoveFunds = false;
     try {
       const usdtContract = new Contract(networkTokenAddress, USDTAbi, signer);
-      digitalP2PCanMoveFunds = await usdtContract
-        .approve(
-          digitalP2PExchangeAddress,
-          ethers.parseUnits(cryptoAmount.toString(), networkDecimals),
-        )
-        .then((res) => {
-          console.log("transaction approved", res);
-          return res;
-        });
-      this.setTransactionState(TransactionState.APPROVED);
+
+      // Send the approval transaction
+      const approveTx = await usdtContract.approve(
+        digitalP2PExchangeAddress,
+        ethers.parseUnits(cryptoAmount.toString(), networkDecimals),
+      );
+
+      console.log("Approval transaction sent:", approveTx.hash);
+
+      // Wait for the transaction to be mined
+      const receipt = await approveTx.wait();
+      console.log("Approval transaction confirmed:", receipt);
+
+      digitalP2PCanMoveFunds = receipt.status === 1;
+
+      if (digitalP2PCanMoveFunds) {
+        this.setTransactionState(TransactionState.APPROVED);
+      } else {
+        throw new Error("Approval transaction failed");
+      }
     } catch (e: any) {
       let errorMessage = "errorApprovingTransaction";
       if (e.reason === "rejected") errorMessage = "errorTransactionNotApproved";
@@ -227,19 +191,27 @@ export class Transaction {
       signer,
     );
     try {
-      await digitalP2PExchangeContract
-        .processOrder(
-          orderId,
-          ethers.parseUnits(cryptoAmount.toString(), networkDecimals),
-          networkTokenAddress,
-          {
-            gasLimit: 300000,
-          },
-        )
-        .then((res) => {
-          console.log("transaction processed", res);
-        });
-      this.setTransactionState(TransactionState.PROCCESED);
+      // Send the processOrder transaction
+      const processOrderTx = await digitalP2PExchangeContract.processOrder(
+        orderId,
+        ethers.parseUnits(cryptoAmount.toString(), networkDecimals),
+        networkTokenAddress,
+        {
+          gasLimit: 300000,
+        },
+      );
+
+      console.log("ProcessOrder transaction sent:", processOrderTx.hash);
+
+      // Wait for the transaction to be mined
+      const receipt = await processOrderTx.wait();
+      console.log("ProcessOrder transaction confirmed:", receipt);
+
+      if (receipt.status === 1) {
+        this.setTransactionState(TransactionState.PROCCESED);
+      } else {
+        throw new Error("ProcessOrder transaction failed");
+      }
     } catch (e: any) {
       console.log("error", e);
       let errorMessage = "errorTransactionProcessOrder";
